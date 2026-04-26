@@ -1,0 +1,22 @@
+{
+  "name": "배송 마스터",
+  "short_name": "배송마스터",
+  "description": "택배 배송 효율 관리 시스템",
+  "start_url": "/delivery-master/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
