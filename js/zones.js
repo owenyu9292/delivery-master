@@ -2,13 +2,39 @@
 function doDepart() {
   const btn = document.getElementById('btn-depart');
   btn.disabled = true;
-  const qty = parseInt(document.getElementById('exp-qty').value)||0;
+  const qtyRaw = document.getElementById('exp-qty').value.trim();
+  const qty = parseInt(qtyRaw)||0;
+
+  // 빈칸 방지
+  if (qtyRaw === '') {
+    toast('예상 수량을 입력해주세요');
+    btn.disabled = false;
+    return;
+  }
+
+  // 0 입력시 무보수 확인팝업
+  if (qty === 0) {
+    if (!confirm('수량 0 = 무보수 도우미 날로 설정합니다.\n계속하시겠습니까?')) {
+      btn.disabled = false;
+      return;
+    }
+  }
+
+  // 오늘 자료 이미 있으면 경고 (일반 업무만)
+  if (qty > 0) {
+    const todayReport = localStorage.getItem('report_'+todayKey());
+    if (todayReport) {
+      if (!confirm('오늘 자료가 이미 저장되어 있습니다!\n새로 시작하면 기존 자료가 덮어씌워집니다.\n계속하시겠습니까?')) {
+        btn.disabled = false;
+        return;
+      }
+    }
+  }
 
   S.departTime = new Date();
   S.expQty = qty;
   S.phase = 'driving';
 
-  // 수량 0 = 무보수 도우미 날
   if (qty === 0) {
     S.isHelperDay = true;
     saveSt();
@@ -27,6 +53,7 @@ function doDepart() {
     toast('출발! 안전운전하세요 🚗');
   }
 }
+
 
 // ── ARRIVE ──
 function doArrive() {
@@ -95,8 +122,15 @@ function startZone() {
   document.getElementById('wz-name').textContent = z.name;
   document.getElementById('wz-start').textContent = ft(S.zStart);
 
-  // 힐스
-  if (z.type==='hils') {
+  // 이전구역 종료시각 저장 (이동시간 계산용)
+  const prevEnd = S.zIdx>0&&S.results[S.zIdx-1]
+    ? new Date(S.results[S.zIdx-1].endTime) : S.arriveTime;
+  S.moveStartTime = new Date(prevEnd);
+
+  // 힐스 또는 대체배송 = 정리선택 화면
+  if (z.type==='hils' || z.type==='alt') {
+    const titleEl = document.getElementById('choice-title');
+    if (titleEl) titleEl.textContent = z.type==='alt' ? '정리 작업 여부 (대체배송)' : '정리 작업 여부';
     document.getElementById('hils-choice').style.display='block';
     document.getElementById('hils-cleanup').style.display='none';
     document.getElementById('miju-sec').style.display='none';
@@ -111,20 +145,22 @@ function startZone() {
       document.getElementById('miju-total').value='';
       document.getElementById('miju-a-result').style.display='none';
       document.getElementById('miju-b-result').style.display='none';
+      // 미주는 바로시작 = 이동시간 즉시 계산
+      const mvM = minBetween(new Date(S.moveStartTime), S.zStart);
+      updateMoveLog(mvM);
     } else {
       document.getElementById('miju-sec').style.display='none';
       document.getElementById('gen-sec').style.display='block';
       showGenSec();
       document.getElementById('gen-qty').value='';
+      // 일반구역도 바로시작 = 이동시간 즉시 계산
+      const mvG = minBetween(new Date(S.moveStartTime), S.zStart);
+      updateMoveLog(mvG);
     }
   }
 
   showStep('working');
-  // 이동시간: 정리시작/바로시작 시각 - 이전구역 종료 (실제 계산)
-  const prevEnd = S.zIdx>0&&S.results[S.zIdx-1] ? new Date(S.results[S.zIdx-1].endTime) : S.arriveTime;
-  // 이동시간은 나중에 정리시작/바로시작 시 업데이트
-  S.moveStartTime = new Date(prevEnd); // 이전 종료 시각 저장
-  addLog('pulse',(S.zIdx+1)+'구역 시작 · '+z.name, ft(S.zStart), S.zIdx===0?'':'이동 계산 중...');
+  addLog('pulse',(S.zIdx+1)+'구역 시작 · '+z.name, ft(S.zStart), '');
   setSt('active',(S.zIdx+1)+'구역 · '+z.name+' 작업중','시작: '+ft(S.zStart));
 
   // 잔여 수량 전구역 표시
@@ -343,8 +379,20 @@ function doZoneEnd() {
   const z = S.zones[S.zIdx];
   let qty = 0;
   if (z.type==='miju') {
-    qty = parseInt(document.getElementById('miju-total').value);
-    if (!qty||qty<=0) { toast('미주 전체 수량을 입력해주세요'); return; }
+    const mijuTotal = parseInt(document.getElementById('miju-total').value);
+    if (!mijuTotal||mijuTotal<=0) { toast('미주 전체 수량을 입력해주세요'); return; }
+    const oscanMiju = (S.oscan||[]).filter(o=>o.zIdx===S.zIdx).reduce((s,o)=>s+o.qty,0);
+    if (S.zIdx>0) {
+      // 2구역 이후 미주: 전체수량 - 이전구역 합계
+      const doneQty = S.results.reduce((s,r)=>s+r.qty,0);
+      qty = mijuTotal - doneQty - oscanMiju;
+      if (qty<0) qty = mijuTotal - doneQty;
+      S.expQty = mijuTotal; // 전체수량으로 예상수량 업데이트
+      updateRemainQty(); // 즉시 반영
+    } else {
+      qty = mijuTotal - oscanMiju;
+    }
+    if (qty<=0) { toast('수량이 0 이하입니다. 확인해주세요'); return; }
   } else {
     const totalInput = parseInt(document.getElementById('gen-qty').value);
     if (!totalInput||totalInput<=0) { toast('수량을 입력해주세요'); return; }
@@ -361,10 +409,15 @@ function doZoneEnd() {
       }
       S.expQty = totalInput; // 전체수량으로 예상수량 업데이트
     } else {
-      qty = totalInput - oscanTotal; // 1구역도 오스캔 차감
+      // 1구역도 오스캔 차감
+      qty = totalInput - oscanTotal;
+      if (qty < 0) qty = 0;
     }
   }
-  if (z.type==='hils'&&!S.cuEnd) { toast('정리 끝 버튼을 먼저 눌러주세요'); return; }
+  // 힐스/대체배송 정리 체크
+  if ((z.type==='hils'||z.type==='alt') && !S.cuEnd) {
+    toast('정리 끝 버튼을 먼저 눌러주세요'); return;
+  }
   if (S.cuEnd==='SKIP') S.cuEnd = null;
 
   // 전구역 수량 0이면 도우미 무보수 자동 확정
@@ -381,7 +434,15 @@ function doZoneEnd() {
   }
 
   const now = new Date();
-  const actualStart = (z.type==='hils'&&S.cuEnd) ? new Date(S.cuEnd) : new Date(S.zStart);
+  // 실제 배송 시작 시각 계산
+  // 힐스/대체: 정리끝(cuEnd) 이후부터, 바로시작(SKIP처리후null)이면 zStart
+  // 미주/일반: zStart 기준
+  let actualStart;
+  if ((z.type==='hils'||z.type==='alt') && S.cuEnd && S.cuEnd!=='SKIP') {
+    actualStart = new Date(S.cuEnd);
+  } else {
+    actualStart = new Date(S.zStart);
+  }
   const realMin = minBetween(actualStart, now);
   // 전체 효율: 1구역은 진접출발부터, 2구역~은 이전구역 종료부터
   const totalBase = S.zIdx===0 ? new Date(S.departTime) : new Date(S.results[S.zIdx-1].endTime);
@@ -454,7 +515,9 @@ function confirmZone() {
   S.phase='between';
   saveSt();
 
-  addLog('g', z.name+' 완료', ft(now), qty+'개 · '+fmtMin(realMin)+' · '+rEff+'개/시간', S.zIdx);
+  const realMinSafe = isNaN(realMin)||realMin<0 ? 0 : realMin;
+  const rEffSafe = isNaN(rEff)||rEff==='-' ? '-' : rEff;
+  addLog('g', z.name+' 완료', ft(now), qty+'개 · '+fmtMin(realMinSafe)+' · '+rEffSafe+'개/시간', S.zIdx);
   showStep('between');
 
   // 요약
