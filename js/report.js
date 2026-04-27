@@ -656,16 +656,20 @@ function removeEventByLogIdx(logIdx) {
 
 function removeHelperByLogIdx(logIdx) {
   // 도우미 로그 순서로 helpers에서 제거
-  const helperLogs = logs.filter(l=>l.dot==='p');
   const helperLogCount = logs.slice(0,logIdx+1).filter(l=>l.dot==='p').length;
   if (S.helpers.length>=helperLogCount) {
-    // 해당 순서의 도우미 제거
     const helperIdx = helperLogCount-1;
     S.helpers.splice(helperIdx,1);
     logs.splice(logIdx,1);
     saveSt();
     renderLog();
     toast('도우미 기록 취소됨');
+  } else {
+    // helpers에 없어도 로그는 삭제
+    logs.splice(logIdx,1);
+    saveSt();
+    renderLog();
+    toast('기록 취소됨');
   }
 }
 
