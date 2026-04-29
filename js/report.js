@@ -17,7 +17,7 @@ function buildReport() {
 
 [통합 분석]
 총 배송 수량: ${totalQty}개
-예상 수량:   ${scanned}개 (스캔미스 +${diff}개)
+예상 수량:   ${scanned}개 (${diff>=0?'스캔미스 +'+diff+'개':'실수량 부족 '+diff+'개'})
 전체 업무:   진접 ${ft(new Date(S.departTime))} 출발
              최종 종료 ${ft(finish)}
 순수 운전:   진접→청량리 ${fmtMin(S.driveMin)}
@@ -369,19 +369,59 @@ function doImport() {
       r.onload = ev=>{
         try {
           const d = JSON.parse(ev.target.result);
-          const arr = Array.isArray(d)?d:[d];
+
+          // 형식 자동 감지
+          // 1. 배열 형식: [{date:...}, ...]
+          // 2. 내보내기 형식: {details:[...], summaries:{...}}
+          // 3. 단일 객체: {date:...}
+          let arr = [];
+          if (Array.isArray(d)) {
+            arr = d;
+          } else if (d.details && Array.isArray(d.details)) {
+            arr = d.details;
+          } else if (d.date) {
+            arr = [d];
+          } else {
+            toast('파일 형식을 인식할 수 없습니다');
+            return;
+          }
+
+          // 중복 날짜 확인
+          const today = todayKey();
+          const existingDates = JSON.parse(localStorage.getItem('all_dates')||'[]');
+          const duplicates = arr.filter(item=>item.date && existingDates.includes(item.date));
+
+          let skipToday = false;
+          if (duplicates.length > 0) {
+            const dupList = duplicates.map(d=>d.date).join(', ');
+            const overwrite = confirm(
+              '이미 저장된 날짜가 있습니다:\n' + dupList +
+              '\n\n덮어쓰시겠습니까?\n[확인] 덮어쓰기 / [취소] 건너뛰기'
+            );
+            if (!overwrite) skipToday = true;
+          }
+
           let count = 0;
           arr.forEach(item=>{
-            if (item && item.date) {
-              localStorage.setItem('report_'+item.date, JSON.stringify(item));
-              const dates = JSON.parse(localStorage.getItem('all_dates')||'[]');
-              if (!dates.includes(item.date)) {
-                dates.push(item.date);
-                dates.sort();
-                localStorage.setItem('all_dates', JSON.stringify(dates));
-              }
-              count++;
+            if (!item || !item.date) return;
+            // 중복 날짜 건너뛰기
+            if (skipToday && existingDates.includes(item.date)) return;
+            localStorage.setItem('report_'+item.date, JSON.stringify(item));
+            const dates = JSON.parse(localStorage.getItem('all_dates')||'[]');
+            if (!dates.includes(item.date)) {
+              dates.push(item.date);
+              dates.sort();
+              localStorage.setItem('all_dates', JSON.stringify(dates));
             }
+            // all_data 업데이트
+            if (item.summary) {
+              try {
+                const all = JSON.parse(localStorage.getItem('all_data')||'{}');
+                all[item.date] = item.summary;
+                localStorage.setItem('all_data', JSON.stringify(all));
+              } catch(e) {}
+            }
+            count++;
           });
           toast(count+'일치 가져오기 완료');
         } catch(e) {
