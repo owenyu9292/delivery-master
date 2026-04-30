@@ -204,14 +204,14 @@ function updateRemainQtyWithInput() {
 
 // ── CLEANUP CHOICE ──
 function startCleanup() {
-  S.cuStart = new Date();
+  S.cuStart = new Date().toISOString();
   // 이동시간 = 정리시작 - 이전구역 종료
-  const mv = S.moveStartTime ? minBetween(new Date(S.moveStartTime), S.cuStart) : 0;
+  const mv = S.moveStartTime ? minBetween(new Date(S.moveStartTime), new Date(S.cuStart)) : 0;
   updateMoveLog(mv);
   saveSt();
   document.getElementById('hils-choice').style.display='none';
   document.getElementById('hils-cleanup').style.display='block';
-  document.getElementById('cu-start').textContent = ft(S.cuStart);
+  document.getElementById('cu-start').textContent = ft(new Date(S.cuStart));
   document.getElementById('cu-end').textContent = '-';
   document.getElementById('btn-cu-end').disabled = false;
   addLog('cu','정리 시작',ft(S.cuStart),'이동: '+mv+'분');
@@ -259,10 +259,10 @@ function updateMijuLog() {
 // ── CLEANUP END ──
 function doCleanupEnd() {
   document.getElementById('btn-cu-end').disabled = true;
-  S.cuEnd = new Date();
+  S.cuEnd = new Date().toISOString();
   saveSt();
-  document.getElementById('cu-end').textContent = ft(S.cuEnd);
-  const cm = minBetween(S.cuStart, S.cuEnd);
+  document.getElementById('cu-end').textContent = ft(new Date(S.cuEnd));
+  const cm = minBetween(new Date(S.cuStart), new Date(S.cuEnd));
   document.getElementById('gen-sec').style.display='block';
   addLog('cu','정리 완료',ft(S.cuEnd),'정리: '+cm+'분');
   toast('정리 완료 · '+cm+'분');
@@ -439,9 +439,9 @@ function doZoneEnd() {
   // 미주/일반: zStart 기준
   let actualStart;
   if ((z.type==='hils'||z.type==='alt') && S.cuEnd && S.cuEnd!=='SKIP') {
-    actualStart = new Date(S.cuEnd);
+    actualStart = S.cuEnd instanceof Date ? S.cuEnd : new Date(S.cuEnd);
   } else {
-    actualStart = new Date(S.zStart);
+    actualStart = S.zStart instanceof Date ? S.zStart : new Date(S.zStart);
   }
   const realMin = minBetween(actualStart, now);
   // 전체 효율: 1구역은 진접출발부터, 2구역~은 이전구역 종료부터

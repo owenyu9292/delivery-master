@@ -40,8 +40,8 @@ function buildReport() {
       t += `\n  A구간(1,2,3동): ${aT}개 / 약 ${fmtMin(aMin)} / ${aEff}개/시간`;
       t += `\n  B구간(5,6,7,8동): ${r.mijuData.bTotal}개 / 약 ${fmtMin(bMin)} / ${bEff}개/시간`;
     }
-    if (r.type==='hils'&&r.cuStart&&r.cuEnd) {
-      const cm = minBetween(r.cuStart,r.cuEnd);
+    if (r.cuStart && r.cuEnd) {
+      const cm = minBetween(new Date(r.cuStart), new Date(r.cuEnd));
       t += `\n  정리: ${ft(new Date(r.cuStart))} ~ ${ft(new Date(r.cuEnd))} (${cm}분)`;
     }
     if (r.type==='alt') t += `\n  ⚠️ 비정규 구역`;
