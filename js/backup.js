@@ -94,6 +94,18 @@ function savePastData() {
       }
     }
 
+    // totalMin: 1구역은 출발~종료, 2구역~은 이전구역종료~이번종료
+    const totalBaseStr = i === 0
+      ? (depart ? date+'T'+depart+':00' : date+'T'+(start||'00:00')+':00')
+      : (results[i-1]?.endTime || date+'T'+(start||'00:00')+':00');
+    const totalMin = (() => {
+      if (!end) return realMin;
+      const bParts = totalBaseStr.slice(11,16).split(':').map(Number);
+      const eParts = end.split(':').map(Number);
+      let m = (eParts[0]*60+eParts[1]) - (bParts[0]*60+bParts[1]);
+      return m < 0 ? m+1440 : (m || realMin);
+    })();
+
     results.push({
       zIdx: i,
       name,
@@ -102,9 +114,9 @@ function savePastData() {
       endTime: date+'T'+(end||'00:00')+':00',
       qty,
       realMin,
-      totalMin: realMin+5,
+      totalMin,
       rEff: realMin>0 ? Math.round((qty/realMin)*60) : '-',
-      tEff: (realMin+5)>0 ? Math.round((qty/(realMin+5))*60) : '-',
+      tEff: totalMin>0 ? Math.round((qty/totalMin)*60) : '-',
       cEff: realMin>0 ? Math.round((qty/realMin)*60) : '-',
       eventMin: 0,
       mijuData,

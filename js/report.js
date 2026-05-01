@@ -250,10 +250,12 @@ function sendSingleGmail(date) {
   const mailto = 'mailto:'+gmail+'?subject='+subject+'&body='+body;
   window.open(mailto);
 
-  // 전송 완료 표시
-  localStorage.setItem('gmail_sent_'+date, new Date().toISOString());
-  toast(date+' 전송 완료');
-  setTimeout(()=>openGmailModal(), 500);
+  // 메일 앱이 열리면 사용자가 직접 전송해야 함 → 전송 확인 후 완료 처리
+  if (confirm(date + ' 리포트 메일을 전송하셨나요?\n[확인] 전송 완료로 표시 / [취소] 나중에 처리')) {
+    localStorage.setItem('gmail_sent_'+date, new Date().toISOString());
+    toast(date+' 전송 완료');
+    setTimeout(()=>openGmailModal(), 500);
+  }
 }
 
 function sendAllGmail() {
@@ -315,7 +317,7 @@ function saveGmail() {
   const e = document.getElementById('g-email').value.trim();
   if (!e) { toast('Gmail 주소를 입력해주세요'); return; }
   localStorage.setItem('gmail', e);
-  localStorage.setItem('gpass', document.getElementById('g-pass').value);
+  // 앱 비밀번호 저장 제거 (mailto: 방식에서는 불필요하며 보안상 위험)
   toast('Gmail 설정 저장 완료');
 }
 

@@ -49,7 +49,10 @@ function loadSt() {
   if (l) logs = JSON.parse(l);
 }
 
-function todayKey() { return new Date().toISOString().split('T')[0]; }
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
 function pad(n) { return String(n).padStart(2,'0'); }
 function ft(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
 function minBetween(a,b) { return Math.round((new Date(b)-new Date(a))/60000); }
