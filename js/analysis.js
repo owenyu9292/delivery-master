@@ -173,7 +173,7 @@ function renderMonth() {
 
   const allData = getAllData();
   const dates = getDatesInRange(start, end);
-  const workDates = dates.filter(d=>allData[d]);
+  const workDates = dates.filter(d=>allData[d] && !allData[d].isHelperDay && allData[d].totalQty>0);
 
   if (workDates.length===0) {
     document.getElementById('month-content').innerHTML =
@@ -182,7 +182,11 @@ function renderMonth() {
   }
 
   const totalQty = workDates.reduce((s,d)=>s+(allData[d].totalQty||0),0);
-  const avgEff = Math.round(workDates.reduce((s,d)=>s+(allData[d].overallEff||0),0) / workDates.length);
+  // 비정상 효율 제외 (overallEff > 300 이상은 제외)
+  const validEffDates = workDates.filter(d=>(allData[d].overallEff||0) < 300 && (allData[d].overallEff||0) > 0);
+  const avgEff = validEffDates.length > 0
+    ? Math.round(validEffDates.reduce((s,d)=>s+(allData[d].overallEff||0),0) / validEffDates.length)
+    : 0;
   const totalScanMiss = workDates.reduce((s,d)=>s+(allData[d].scanMiss||0),0);
   const maxDay = workDates.reduce((a,b)=>(allData[a]?.totalQty||0)>(allData[b]?.totalQty||0)?a:b);
   const minDay = workDates.reduce((a,b)=>(allData[a]?.totalQty||0)<(allData[b]?.totalQty||0)?a:b);
@@ -196,7 +200,8 @@ function renderMonth() {
       zoneStats[name].qty+=z.qty||0;
       zoneStats[name].realMin+=z.realMin||0;
       zoneStats[name].days++;
-      if(z.rEff&&z.rEff!=='-') zoneStats[name].effs.push(z.rEff);
+      // 비정상 효율 필터링 (realMin < 5분이면 제외)
+      if(z.rEff&&z.rEff!=='-'&&z.realMin>=5) zoneStats[name].effs.push(z.rEff);
     });
   });
 

@@ -739,29 +739,42 @@ function restoreState() {
       showStep('setup');
       setSt('active','구역 설정 중','');
       break;
-    case 'working':
+    case 'working': {
       const z = S.zones[S.zIdx];
       if (!z) return;
       document.getElementById('wz-badge').textContent=(S.zIdx+1)+'구역';
       document.getElementById('wz-name').textContent=z.name;
       document.getElementById('wz-start').textContent=ft(new Date(S.zStart));
-      if (z.type==='hils') {
-        document.getElementById('hils-cleanup').style.display='block';
-        if (S.cuStart) document.getElementById('cu-start').textContent=ft(new Date(S.cuStart));
-        if (S.cuEnd) {
-          document.getElementById('cu-end').textContent=ft(new Date(S.cuEnd));
-          document.getElementById('btn-cu-end').disabled=true;
-          document.getElementById('gen-sec').style.display='block';
+
+      if (z.type==='hils' || z.type==='alt') {
+        if (!S.cuStart) {
+          // 정리시작 안눌렀으면 → 정리선택 화면으로
+          const titleEl = document.getElementById('choice-title');
+          if (titleEl) titleEl.textContent = z.type==='alt' ? '정리 작업 여부 (대체배송)' : '정리 작업 여부';
+          document.getElementById('hils-choice').style.display='block';
+          document.getElementById('hils-cleanup').style.display='none';
+        } else {
+          // 정리시작 눌렀으면 → 정리 작업 중 화면
+          document.getElementById('hils-choice').style.display='none';
+          document.getElementById('hils-cleanup').style.display='block';
+          document.getElementById('cu-start').textContent=ft(new Date(S.cuStart));
+          if (S.cuEnd && S.cuEnd!=='SKIP') {
+            document.getElementById('cu-end').textContent=ft(new Date(S.cuEnd));
+            document.getElementById('btn-cu-end').disabled=true;
+            document.getElementById('gen-sec').style.display='block';
+          }
         }
       } else if (z.type==='miju') {
         document.getElementById('miju-sec').style.display='block';
       } else {
         document.getElementById('gen-sec').style.display='block';
+        showGenSec();
       }
       showStep('working');
       updateRemainQty();
       setSt('active',(S.zIdx+1)+'구역 · '+z.name+' 작업중','복구됨');
       break;
+    }
     case 'between': showStep('between'); break;
     case 'finished': showStep('done'); buildReport(); break;
   }
