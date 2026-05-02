@@ -204,6 +204,8 @@ function updateRemainQtyWithInput() {
 
 // ── CLEANUP CHOICE ──
 function startCleanup() {
+  // 중복 방지: 이미 정리시작 로그 있으면 스킵
+  if (logs.some(l=>l.title==='정리 시작' && l.zIdx===S.zIdx)) return;
   S.cuStart = new Date().toISOString();
   // 이동시간 = 정리시작 - 이전구역 종료
   const mv = S.moveStartTime ? minBetween(new Date(S.moveStartTime), new Date(S.cuStart)) : 0;
@@ -219,6 +221,8 @@ function startCleanup() {
 }
 
 function skipCleanup() {
+  // 중복 방지: 이미 바로 배송 시작 로그 있으면 스킵
+  if (logs.some(l=>l.title==='바로 배송 시작' && l.zIdx===S.zIdx)) return;
   const now = new Date();
   const mv = S.moveStartTime ? minBetween(new Date(S.moveStartTime), now) : 0;
   updateMoveLog(mv);
@@ -258,6 +262,8 @@ function updateMijuLog() {
 
 // ── CLEANUP END ──
 function doCleanupEnd() {
+  // 중복 방지: 이미 정리 완료 로그 있으면 스킵
+  if (logs.some(l=>l.title==='정리 완료' && l.zIdx===S.zIdx)) return;
   document.getElementById('btn-cu-end').disabled = true;
   S.cuEnd = new Date().toISOString();
   saveSt();

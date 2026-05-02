@@ -409,6 +409,10 @@ function doImport() {
             // 중복 날짜 건너뛰기
             if (skipToday && existingDates.includes(item.date)) return;
             localStorage.setItem('report_'+item.date, JSON.stringify(item));
+            // logs_ 키도 같이 덮어쓰기 (중복 로그 방지)
+            if (item.state && Array.isArray(item.state.logs)) {
+              localStorage.setItem('logs_'+item.date, JSON.stringify(item.state.logs));
+            }
             const dates = JSON.parse(localStorage.getItem('all_dates')||'[]');
             if (!dates.includes(item.date)) {
               dates.push(item.date);
