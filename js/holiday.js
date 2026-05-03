@@ -87,7 +87,7 @@ function renderSettingsCal() {
     const dow = new Date(dateStr2).getDay();
     const holiday = isHoliday(dateStr2);
     const hasData = !!allData[dateStr2];
-    const isToday = dateStr2 === new Date().toISOString().split('T')[0];
+    const isToday = dateStr2 === todayKey();
 
     let bg = 'var(--surface2)';
     let color = dow===0 ? 'var(--red)' : dow===6 ? 'var(--accent2)' : 'var(--text)';

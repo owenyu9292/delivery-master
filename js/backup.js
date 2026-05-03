@@ -5,7 +5,7 @@ let pastZoneCount = 0;
 
 function openPastDataModal() {
   pastZoneCount = 0;
-  document.getElementById('past-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('past-date').value = todayKey();
   document.getElementById('past-depart').value = '';
   document.getElementById('past-arrive').value = '';
   document.getElementById('past-exp-qty').value = '';

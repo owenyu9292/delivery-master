@@ -274,7 +274,7 @@ function renderMonth() {
 
 // ── 날짜 조회 ──
 function initSearch() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayKey();
   document.getElementById('search-date').value = today;
   searchDate();
 }

@@ -317,7 +317,7 @@ function saveGmail() {
   const e = document.getElementById('g-email').value.trim();
   if (!e) { toast('Gmail 주소를 입력해주세요'); return; }
   localStorage.setItem('gmail', e);
-  // 앱 비밀번호 저장 제거 (mailto: 방식에서는 불필요하며 보안상 위험)
+  localStorage.removeItem('gpass'); // 기존 저장된 앱 비밀번호 삭제
   toast('Gmail 설정 저장 완료');
 }
 
