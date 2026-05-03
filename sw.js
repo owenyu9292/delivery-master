@@ -1,4 +1,4 @@
-const CACHE_NAME = 'delivery-master-v8';
+const CACHE_NAME = 'delivery-master-v9';
 const ASSETS = [
   '/delivery-master/',
   '/delivery-master/index.html',
@@ -12,6 +12,8 @@ const ASSETS = [
   '/delivery-master/js/holiday.js',
   '/delivery-master/js/backup.js',
   '/delivery-master/js/init.js',
+  '/delivery-master/icon-192.png',
+  '/delivery-master/icon-512.png',
 ];
 
 // 설치 시 캐시
