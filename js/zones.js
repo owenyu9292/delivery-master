@@ -204,8 +204,8 @@ function updateRemainQtyWithInput() {
 
 // ── CLEANUP CHOICE ──
 function startCleanup() {
-  // 중복 방지: 이미 정리시작 로그 있으면 스킵
-  if (logs.some(l=>l.title==='정리 시작' && l.zIdx===S.zIdx)) return;
+  // 중복 방지: 이미 정리시작된 경우 스킵
+  if (S.cuStart) return;
   S.cuStart = new Date().toISOString();
   // 이동시간 = 정리시작 - 이전구역 종료
   const mv = S.moveStartTime ? minBetween(new Date(S.moveStartTime), new Date(S.cuStart)) : 0;
@@ -221,8 +221,8 @@ function startCleanup() {
 }
 
 function skipCleanup() {
-  // 중복 방지: 이미 바로 배송 시작 로그 있으면 스킵
-  if (logs.some(l=>l.title==='바로 배송 시작' && l.zIdx===S.zIdx)) return;
+  // 중복 방지: 이미 바로시작 처리된 경우 스킵
+  if (S.cuEnd === 'SKIP') return;
   const now = new Date();
   const mv = S.moveStartTime ? minBetween(new Date(S.moveStartTime), now) : 0;
   updateMoveLog(mv);
@@ -262,8 +262,8 @@ function updateMijuLog() {
 
 // ── CLEANUP END ──
 function doCleanupEnd() {
-  // 중복 방지: 이미 정리 완료 로그 있으면 스킵
-  if (logs.some(l=>l.title==='정리 완료' && l.zIdx===S.zIdx)) return;
+  // 중복 방지: 이미 정리완료된 경우 스킵
+  if (S.cuEnd && S.cuEnd !== 'SKIP') return;
   document.getElementById('btn-cu-end').disabled = true;
   S.cuEnd = new Date().toISOString();
   saveSt();
@@ -393,7 +393,6 @@ function doZoneEnd() {
       const doneQty = S.results.reduce((s,r)=>s+r.qty,0);
       qty = mijuTotal - doneQty - oscanMiju;
       if (qty<0) qty = mijuTotal - doneQty;
-      S.expQty = mijuTotal; // 전체수량으로 예상수량 업데이트
       updateRemainQty(); // 즉시 반영
     } else {
       qty = mijuTotal - oscanMiju;
@@ -408,12 +407,9 @@ function doZoneEnd() {
       const doneQty = S.results.reduce((s,r)=>s+r.qty,0);
       qty = totalInput - doneQty - oscanTotal;
       if (qty<0) {
-        // 경고만 하고 진행은 가능하게
-        // 오스캔이 있을 수 있으므로 오스캔 합계 제외하고 재계산
         qty = totalInput - doneQty;
         if (qty < 0) qty = 0;
       }
-      S.expQty = totalInput; // 전체수량으로 예상수량 업데이트
     } else {
       // 1구역도 오스캔 차감
       qty = totalInput - oscanTotal;
