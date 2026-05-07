@@ -51,6 +51,10 @@ function buildReport() {
       const oTotal = zoneOscan.reduce((s,o)=>s+o.qty,0);
       t += `\n  오스캔 차감: -${oTotal}개`;
     }
+    // 구역별 효율 3단계
+    t += `\n  실제 효율: 시간당 ${r.rEff}개`;
+    t += `\n  전체 효율: 시간당 ${r.tEff}개`;
+    if (r.cEff !== r.rEff) t += `\n  이벤트 보정 효율: 시간당 ${r.cEff}개`;
   });
 
   if (S.events.length>0) {
