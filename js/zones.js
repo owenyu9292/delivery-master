@@ -225,14 +225,28 @@ function skipCleanup() {
   if (S.cuEnd === 'SKIP') return;
   const now = new Date();
   const mv = S.moveStartTime ? minBetween(new Date(S.moveStartTime), now) : 0;
-  updateMoveLog(mv);
-  S.cuStart = null;
+
+  // 5분 초과 시 정리시간 자동 계산 후 확인 팝업
+  if (mv > 5) {
+    const cleanMin = mv - 5;
+    if (!confirm(`이동시간: 5분 고정\n정리시간: ${cleanMin}분 자동 기록\n\n확인하시겠습니까?`)) {
+      return;
+    }
+    // 정리 시작/종료 자동 세팅
+    const cuStartTime = new Date(now.getTime() - (cleanMin * 60000));
+    S.cuStart = cuStartTime.toISOString();
+    S.cuEnd = now.toISOString();
+    addLog('cu', '정리 시작', ft(cuStartTime), '이동: 5분', S.zIdx);
+    addLog('cu', '정리 완료', ft(now), '정리: '+cleanMin+'분', S.zIdx);
+  }
+
+  updateMoveLog(Math.min(mv, 5));
   S.cuEnd = 'SKIP';
   saveSt();
   document.getElementById('hils-choice').style.display='none';
   document.getElementById('hils-cleanup').style.display='none';
   document.getElementById('gen-sec').style.display='block';
-  addLog('cu','바로 배송 시작',ft(now),'이동: '+mv+'분');
+  addLog('cu','바로 배송 시작',ft(now),'이동: '+Math.min(mv,5)+'분');
   toast('바로 배송 시작');
 }
 

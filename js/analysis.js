@@ -286,7 +286,14 @@ function searchDate() {
   const el = document.getElementById('search-result');
 
   if (!data) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-txt">해당 날짜 데이터가 없습니다</div></div>';
+    const holiday = isHoliday(date);
+    if (holiday) {
+      const weekIdx = getRotationWeekIdx(new Date(date));
+      const weekLabel = weekIdx >= 0 ? `${weekIdx+1}주차` : '';
+      el.innerHTML = `<div class="empty"><div class="empty-icon">🏖️</div><div class="empty-txt">휴무일 (${weekLabel} ${holiday})</div></div>`;
+    } else {
+      el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-txt">자료 없음</div></div>`;
+    }
     return;
   }
 

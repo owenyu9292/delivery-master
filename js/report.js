@@ -757,7 +757,16 @@ function restoreState() {
       document.getElementById('wz-start').textContent=ft(new Date(S.zStart));
 
       if (z.type==='hils' || z.type==='alt') {
-        if (!S.cuStart) {
+        if (S.cuEnd === 'SKIP' || (S.cuEnd && S.cuEnd !== 'SKIP')) {
+          // 바로시작 또는 정리완료 → 배송 화면
+          document.getElementById('hils-choice').style.display='none';
+          document.getElementById('hils-cleanup').style.display='none';
+          document.getElementById('gen-sec').style.display='block';
+          if (S.cuEnd && S.cuEnd !== 'SKIP') {
+            document.getElementById('cu-start').textContent=ft(new Date(S.cuStart));
+            document.getElementById('cu-end').textContent=ft(new Date(S.cuEnd));
+          }
+        } else if (!S.cuStart) {
           // 정리시작 안눌렀으면 → 정리선택 화면으로
           const titleEl = document.getElementById('choice-title');
           if (titleEl) titleEl.textContent = z.type==='alt' ? '정리 작업 여부 (대체배송)' : '정리 작업 여부';

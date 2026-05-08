@@ -38,20 +38,30 @@ function isHoliday(dateStr) {
   // 정기 패턴 체크
   const d = new Date(dateStr);
   const dow = d.getDay();
-  const weekNum = getWeekNumInMonth(d);
-  const patternIdx = (weekNum-1) % 4;
+  const patternIdx = getRotationWeekIdx(d);
+  if (patternIdx < 0) return null;
   const pattern = h.pattern[patternIdx]||[];
   if (pattern.includes(dow)) return '정기휴무';
 
   return null;
 }
 
-function getWeekNumInMonth(d) {
-  // 해당 월의 첫 일요일 기준 주차 계산
-  const first = new Date(d.getFullYear(), d.getMonth(), 1);
-  const firstSunday = first.getDay()===0 ? first : new Date(first.setDate(first.getDate()+(7-first.getDay())%7));
-  if (d < firstSunday) return 0;
-  return Math.floor((d-firstSunday)/(7*24*60*60*1000))+1;
+// 4주 로테이션 기준일: 2026-04-27 (1주차 월요일 시작)
+const ROTATION_BASE = new Date('2026-04-27T00:00:00');
+
+function getRotationWeekIdx(d) {
+  // 해당 날짜가 속한 주의 월요일 구하기
+  const day = new Date(d);
+  const dow = day.getDay(); // 0=일, 1=월
+  const monday = new Date(day);
+  monday.setDate(day.getDate() - (dow === 0 ? 6 : dow - 1));
+  monday.setHours(0,0,0,0);
+  // 기준일(월요일)부터 몇 주 지났는지
+  const diffMs = monday - ROTATION_BASE;
+  const diffWeeks = Math.floor(diffMs / (7*24*60*60*1000));
+  // 음수면 기준일 이전
+  if (diffWeeks < 0) return -1;
+  return diffWeeks % 4; // 0=1주차, 1=2주차, 2=3주차, 3=4주차
 }
 
 // ── 설정 달력 ──
