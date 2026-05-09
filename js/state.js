@@ -43,7 +43,7 @@ function loadSt() {
     if (S.arriveTime) S.arriveTime = new Date(S.arriveTime);
     if (S.zStart) S.zStart = new Date(S.zStart);
     if (S.cuStart) S.cuStart = new Date(S.cuStart);
-    if (S.cuEnd) S.cuEnd = new Date(S.cuEnd);
+    if (S.cuEnd && S.cuEnd !== 'SKIP') S.cuEnd = new Date(S.cuEnd);
     if (S.finishTime) S.finishTime = new Date(S.finishTime);
   }
   if (l) logs = JSON.parse(l);

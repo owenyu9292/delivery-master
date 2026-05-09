@@ -298,8 +298,25 @@ function searchDate() {
   }
 
   const t = data.reportText||'';
+  const logList = (data.state && data.state.logs) ? data.state.logs : [];
+  const dots = {g:'green',b:'blue',pulse:'blue',cu:'purple',a:'amber',p:'gray'};
+
+  const logHtml = logList.length ? `
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">📋 로그 기록</div>
+      ${logList.map(l=>`
+        <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--${dots[l.dot]||'text2'});margin-top:5px;flex-shrink:0;"></div>
+          <div>
+            <div style="font-size:13px;font-weight:600;">${l.title}</div>
+            <div style="font-size:11px;color:var(--text2);">${l.time}${l.detail?` · ${l.detail}`:''}</div>
+          </div>
+        </div>`).join('')}
+    </div>` : '';
+
   el.innerHTML = `
     <div class="report-box">${t}</div>
+    ${logHtml}
     <button class="btn btn-gray btn-sm" onclick="fallbackCopy(document.querySelector('.report-box').textContent)" style="margin-top:8px;">📋 복사</button>
   `;
 }
