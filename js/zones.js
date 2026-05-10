@@ -441,12 +441,26 @@ function doZoneEnd() {
     ? parseInt(document.getElementById('miju-total').value)||0
     : parseInt(document.getElementById('gen-qty').value)||0;
   if (totalInput2===0) {
-    // 도우미 무보수로 자동 저장
-    S.helpers.push({ id:Date.now(), type:'give', min:0, zIdx:S.zIdx, time:new Date().toISOString(), autoDetected:true });
-    addLog('p','도우미(자동): 무보수 배송', ft(new Date()), '수량 0 자동 감지', S.zIdx);
-    saveSt();
-    toast('수량 0 → 도우미 무보수 자동 기록됨');
-    return;
+    // 유료 도우미 수량이 이미 입력된 경우 → 그냥 진행
+    const hasPaidHelper = S.helpers.some(h=>h.type==='paid' && h.zIdx===S.zIdx && (h.qty||0)>0);
+    if (hasPaidHelper) {
+      // 유료 도우미가 배송한 케이스 → 무보수 처리 안 함
+    } else {
+      // 팝업으로 선택
+      const choice = confirm('수량이 0입니다.\n\n[확인] 무보수 도우미 날로 기록\n[취소] 유료 도우미 수량 입력 필요');
+      if (choice) {
+        // 무보수 처리
+        S.helpers.push({ id:Date.now(), type:'give', min:0, zIdx:S.zIdx, time:new Date().toISOString(), autoDetected:true });
+        addLog('p','도우미(자동): 무보수 배송', ft(new Date()), '수량 0 자동 감지', S.zIdx);
+        saveSt();
+        toast('수량 0 → 도우미 무보수 자동 기록됨');
+        return;
+      } else {
+        // 취소 → 도우미 모달 열기
+        toast('도우미 버튼으로 유료 도우미 수량을 먼저 입력해주세요');
+        return;
+      }
+    }
   }
 
   const now = new Date();
