@@ -403,11 +403,12 @@ function doZoneEnd() {
     if (!mijuTotal||mijuTotal<=0) { toast('미주 전체 수량을 입력해주세요'); return; }
     const oscanMiju = (S.oscan||[]).filter(o=>o.zIdx===S.zIdx).reduce((s,o)=>s+o.qty,0);
     if (S.zIdx>0) {
-      // 2구역 이후 미주: 전체수량 - 이전구역 합계
-      const doneQty = S.results.reduce((s,r)=>s+r.qty,0);
+      // 2구역 이후 미주: 전체수량 - 이전구역 합계 (유료 도우미 포함)
+      const doneQty = S.results.reduce((s,r)=>s+r.qty,0)
+        + S.helpers.filter(h=>h.type==='paid' && h.zIdx<S.zIdx).reduce((s,h)=>s+(h.qty||0),0);
       qty = mijuTotal - doneQty - oscanMiju;
       if (qty<0) qty = mijuTotal - doneQty;
-      updateRemainQty(); // 즉시 반영
+      updateRemainQty();
     } else {
       qty = mijuTotal - oscanMiju;
     }
@@ -417,8 +418,9 @@ function doZoneEnd() {
     if (!totalInput||totalInput<=0) { toast('수량을 입력해주세요'); return; }
     const oscanTotal = (S.oscan||[]).filter(o=>o.zIdx===S.zIdx).reduce((s,o)=>s+o.qty,0);
     if (S.zIdx>0) {
-      // 2구역부터 자동계산
-      const doneQty = S.results.reduce((s,r)=>s+r.qty,0);
+      // 2구역부터 자동계산 (유료 도우미 포함)
+      const doneQty = S.results.reduce((s,r)=>s+r.qty,0)
+        + S.helpers.filter(h=>h.type==='paid' && h.zIdx<S.zIdx).reduce((s,h)=>s+(h.qty||0),0);
       qty = totalInput - doneQty - oscanTotal;
       if (qty<0) {
         qty = totalInput - doneQty;

@@ -159,8 +159,8 @@ function buildSummary() {
     eventCount: S.events.length,
     eventTypes: S.events.map(e=>e.type),
     helperGiveMin: S.helpers.filter(h=>h.type==='give').reduce((s,h)=>s+h.min,0),
-    helperReceive: S.helpers.filter(h=>h.type==='paid'||h.type==='trade').length,
-    isHelperDay: totalQty===0 && S.helpers.length>0,
+    helperReceive: S.helpers.filter(h=>(h.type==='paid'||h.type==='trade')&&(h.qty||0)>0).length,
+    isHelperDay: S.results.reduce((s,r)=>s+r.qty,0)===0 && S.helpers.some(h=>h.type==='give'),
   };
 }
 
