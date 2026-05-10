@@ -3,7 +3,8 @@ function buildReport() {
   const n = new Date();
   const days=['일','월','화','수','목','금','토'];
   const dateStr = n.getFullYear()+'년 '+(n.getMonth()+1)+'월 '+n.getDate()+'일 '+days[n.getDay()]+'요일';
-  const totalQty = S.results.reduce((s,r)=>s+r.qty,0);
+  const totalQty = S.results.reduce((s,r)=>s+r.qty,0)
+    + S.helpers.filter(h=>h.type==='paid').reduce((s,h)=>s+(h.qty||0),0);
   const scanned = S.expQty;
   const diff = totalQty-scanned;
   const finish = S.finishTime ? new Date(S.finishTime) : n;
@@ -120,7 +121,8 @@ function buildReport() {
 
 function buildSummary() {
   // 분석용 요약 데이터
-  const totalQty = S.results.reduce((s,r)=>s+r.qty,0);
+  const totalQty = S.results.reduce((s,r)=>s+r.qty,0)
+    + S.helpers.filter(h=>h.type==='paid').reduce((s,h)=>s+(h.qty||0),0);
   const allRealMin = S.results.reduce((s,r)=>s+r.realMin,0);
   const zoneData = {};
   S.results.forEach(r=>{
@@ -619,6 +621,12 @@ function openLogHelper(zIdx) {
   });
   const hMin = document.getElementById('h-min');
   if (hMin) hMin.value='';
+  const hTradeQty = document.getElementById('h-trade-qty');
+  if (hTradeQty) hTradeQty.value='';
+  const hPaidQty = document.getElementById('h-paid-qty');
+  if (hPaidQty) hPaidQty.value='';
+  // 서로도움 기본 선택
+  setHelper('trade');
   // 저장 버튼을 로그용으로 교체
   const saveBtn = document.querySelector('#m-helper .btn-blue');
   if (saveBtn) saveBtn.setAttribute('onclick','saveLogHelper()');
@@ -627,27 +635,40 @@ function openLogHelper(zIdx) {
 
 function saveLogHelper() {
   if (!helperType) { toast('유형을 선택해주세요'); return; }
-  const min = helperType==='give' ? parseInt(document.getElementById('h-min').value)||0 : 0;
-  const labels = {give:'도움 제공(무보수)', paid:'유료 도움 받기', trade:'상계 교환'};
+  const labels = {give:'도움 제공(무보수)', paid:'유료 도움 받기', trade:'서로 도움'};
   const zIdx = logHelperZoneIdx !== null ? logHelperZoneIdx : S.zIdx;
   const id = Date.now();
-  S.helpers.push({ id, type:helperType, min, zIdx, time:new Date().toISOString() });
+  let min = 0, qty = 0;
+
+  if (helperType === 'give') {
+    min = parseInt(document.getElementById('h-min').value)||0;
+  } else if (helperType === 'trade') {
+    qty = parseInt(document.getElementById('h-trade-qty').value)||0;
+    if (!qty) { toast('수량을 입력해주세요'); return; }
+  } else if (helperType === 'paid') {
+    qty = parseInt(document.getElementById('h-paid-qty').value)||0;
+    if (!qty) { toast('수량을 입력해주세요'); return; }
+  }
+
+  S.helpers.push({ id, type:helperType, min, qty, zIdx, time:new Date().toISOString() });
   saveSt();
 
+  const detail = helperType==='give' ? min+'분' : qty+'개';
   insertLogAfterZone(zIdx, {
     dot:'p',
     title:'도우미: '+labels[helperType],
     time: ft(new Date()),
-    detail: helperType==='give' ? min+'분' : '',
+    detail,
     zIdx,
     isEvent: false
   });
 
   closeModal('m-helper');
-  // 저장 버튼 원래대로 복원
   const saveBtn = document.querySelector('#m-helper .btn-blue');
   if (saveBtn) saveBtn.setAttribute('onclick','saveHelper()');
   logHelperZoneIdx = null;
+  toast('도우미 기록 완료');
+}
   renderLog();
   toast('도우미 추가 완료');
 }

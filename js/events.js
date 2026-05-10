@@ -40,13 +40,33 @@ function setHelper(t) {
 }
 function saveHelper() {
   if (!helperType) { toast('유형을 선택해주세요'); return; }
-  const min = helperType==='give' ? parseInt(document.getElementById('h-min').value)||0 : 0;
-  const labels = {give:'도움 제공(무보수)', paid:'유료 도움 받기', trade:'상계 교환'};
+  const labels = {give:'도움 제공(무보수)', paid:'유료 도움 받기', trade:'서로 도움'};
   const id = Date.now();
-  S.helpers.push({ id, type:helperType, min, zIdx:S.zIdx, time:new Date().toISOString() });
+  let min = 0, qty = 0;
+
+  if (helperType === 'give') {
+    min = parseInt(document.getElementById('h-min').value)||0;
+  } else if (helperType === 'trade') {
+    qty = parseInt(document.getElementById('h-trade-qty').value)||0;
+    if (!qty) { toast('수량을 입력해주세요'); return; }
+  } else if (helperType === 'paid') {
+    qty = parseInt(document.getElementById('h-paid-qty').value)||0;
+    if (!qty) { toast('수량을 입력해주세요'); return; }
+  }
+
+  S.helpers.push({ id, type:helperType, min, qty, zIdx:S.zIdx, time:new Date().toISOString() });
   saveSt();
-  addLog('p','도우미: '+labels[helperType], ft(new Date()), helperType==='give'?min+'분 (취소하려면 로그탭 확인)':'');
+
+  const detail = helperType==='give'
+    ? min+'분 (취소하려면 로그탭 확인)'
+    : qty+'개';
+  addLog('p','도우미: '+labels[helperType], ft(new Date()), detail);
   closeModal('m-helper');
+
+  // 입력값 초기화
+  document.getElementById('h-min').value='';
+  document.getElementById('h-trade-qty').value='';
+  document.getElementById('h-paid-qty').value='';
   toast('도우미 기록 완료');
 }
 
@@ -62,6 +82,23 @@ function removeHelper(id) {
 function openHelperLogModal() {
   const helpers = S.helpers.filter(h=>h.zIdx===S.zIdx);
   if (helpers.length===0) { closeModal('m-helper-log'); return; }
-  // 간단히 toast로 표시
   toast('도우미 '+helpers.length+'건 기록됨');
+}
+
+function openHelperModal() {
+  helperType = null;
+  ['give','paid','trade'].forEach(h=>{
+    const box = document.getElementById('h-'+h+'-box');
+    const btn = document.getElementById('h-'+h+'-btn');
+    if (box) box.style.display='none';
+    if (btn) btn.style.opacity='0.5';
+  });
+  document.getElementById('h-min').value='';
+  document.getElementById('h-trade-qty').value='';
+  document.getElementById('h-paid-qty').value='';
+  // 서로도움 기본 선택
+  setHelper('trade');
+  const saveBtn = document.querySelector('#m-helper .btn-blue');
+  if (saveBtn) saveBtn.setAttribute('onclick','saveHelper()');
+  openModal('m-helper');
 }
