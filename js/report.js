@@ -4,12 +4,15 @@ function buildReport() {
   const days=['일','월','화','수','목','금','토'];
   const dateStr = n.getFullYear()+'년 '+(n.getMonth()+1)+'월 '+n.getDate()+'일 '+days[n.getDay()]+'요일';
   const totalQty = S.results.reduce((s,r)=>s+r.qty,0)
+    + S.helpers.filter(h=>h.type==='paid').reduce((s,h)=>s+(h.qty||0),0)
+    + S.helpers.filter(h=>h.type==='trade').reduce((s,h)=>s+(h.qty||0),0);
+  const effQty = S.results.reduce((s,r)=>s+r.qty,0)
     + S.helpers.filter(h=>h.type==='paid').reduce((s,h)=>s+(h.qty||0),0);
   const scanned = S.expQty;
   const diff = totalQty-scanned;
   const finish = S.finishTime ? new Date(S.finishTime) : n;
   const allRealMin = S.results.reduce((s,r)=>s+r.realMin,0);
-  const overallEff = effCalc(totalQty, allRealMin);
+  const overallEff = effCalc(effQty, allRealMin);
 
   let t = `━━━━━━━━━━━━━━━━━━━━━━━━
 📦 일일 택배 마스터 Report
@@ -82,13 +85,16 @@ function buildReport() {
     t += `\n\n[정규 효율 (대체배송 제외)]\n  시간당 ${effCalc(rq,rm)}개`;
   }
 
-  // 도우미 상계
+  // 도우미 현황
   const givenMin = S.helpers.filter(h=>h.type==='give').reduce((s,h)=>s+h.min,0);
+  const tradeQty = S.helpers.filter(h=>h.type==='trade').reduce((s,h)=>s+(h.qty||0),0);
   const tradeCount = S.helpers.filter(h=>h.type==='trade').length;
-  if (givenMin>0||tradeCount>0) {
+  const paidQty = S.helpers.filter(h=>h.type==='paid').reduce((s,h)=>s+(h.qty||0),0);
+  if (givenMin>0||tradeCount>0||paidQty>0) {
     t += `\n\n[도우미 현황]`;
     if (givenMin>0) t += `\n  도움 제공(무보수): ${fmtMin(givenMin)}`;
-    if (tradeCount>0) t += `\n  상계 교환: ${tradeCount}건`;
+    if (tradeCount>0) t += `\n  서로 도움: ${tradeCount}건${tradeQty>0?' ('+tradeQty+'개, 효율 미포함)':''}`;
+    if (paidQty>0) t += `\n  유료 도움 받기: ${paidQty}개 (효율 포함)`;
   }
 
   t += `\n━━━━━━━━━━━━━━━━━━━━━━━━`;
@@ -122,6 +128,9 @@ function buildReport() {
 function buildSummary() {
   // 분석용 요약 데이터
   const totalQty = S.results.reduce((s,r)=>s+r.qty,0)
+    + S.helpers.filter(h=>h.type==='paid').reduce((s,h)=>s+(h.qty||0),0)
+    + S.helpers.filter(h=>h.type==='trade').reduce((s,h)=>s+(h.qty||0),0);
+  const effQty = S.results.reduce((s,r)=>s+r.qty,0)
     + S.helpers.filter(h=>h.type==='paid').reduce((s,h)=>s+(h.qty||0),0);
   const allRealMin = S.results.reduce((s,r)=>s+r.realMin,0);
   const zoneData = {};
@@ -145,7 +154,7 @@ function buildSummary() {
     expQty: S.expQty,
     scanMiss: totalQty - S.expQty,
     driveMin: S.driveMin,
-    overallEff: effCalc(totalQty, allRealMin),
+    overallEff: effCalc(effQty, allRealMin),
     zones: zoneData,
     eventCount: S.events.length,
     eventTypes: S.events.map(e=>e.type),
