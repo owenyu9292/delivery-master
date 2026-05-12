@@ -678,9 +678,6 @@ function saveLogHelper() {
   logHelperZoneIdx = null;
   toast('도우미 기록 완료');
 }
-  renderLog();
-  toast('도우미 추가 완료');
-}
 
 function insertLogAfterZone(zIdx, logItem) {
   // 해당 구역 완료 로그 위치 찾기
