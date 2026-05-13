@@ -1,0 +1,23 @@
+{
+  "name": "배송 마스터 시즌2",
+  "short_name": "배송시즌2",
+  "description": "택배 배송 효율 관리 시스템 시즌2",
+  "start_url": "/delivery-master/season2/",
+  "scope": "/delivery-master/season2/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
