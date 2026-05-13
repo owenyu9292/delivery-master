@@ -513,6 +513,55 @@ function doExport() {
   }
 }
 
+function normalizeImportItems(data) {
+  if (Array.isArray(data)) return data;
+  if (data.details && Array.isArray(data.details)) return data.details;
+  if (data.date) return [data];
+  return null;
+}
+
+function importSeason2StorageItems(data) {
+  if (!data.storageItems || typeof data.storageItems !== 'object') return 0;
+
+  let count = 0;
+  Object.entries(data.storageItems).forEach(([key, value])=>{
+    if (!key || value === undefined || value === null) return;
+    const cleanKey = key.startsWith(DM2_STORAGE_PREFIX) ? key.slice(DM2_STORAGE_PREFIX.length) : key;
+    localStorage.setItem(cleanKey, value);
+    count++;
+  });
+  return count;
+}
+
+function importReportItem(item, existingDates, skipDuplicates) {
+  if (!item || !item.date) return false;
+  if (skipDuplicates && existingDates.includes(item.date)) return false;
+
+  localStorage.setItem('report_'+item.date, JSON.stringify(item));
+
+  const itemLogs = item.logs || (item.state && item.state.logs);
+  if (Array.isArray(itemLogs)) {
+    localStorage.setItem('logs_'+item.date, JSON.stringify(itemLogs));
+  }
+
+  const dates = JSON.parse(localStorage.getItem('all_dates')||'[]');
+  if (!dates.includes(item.date)) {
+    dates.push(item.date);
+    dates.sort();
+    localStorage.setItem('all_dates', JSON.stringify(dates));
+  }
+
+  if (item.summary) {
+    try {
+      const all = JSON.parse(localStorage.getItem('all_data')||'{}');
+      all[item.date] = item.summary;
+      localStorage.setItem('all_data', JSON.stringify(all));
+    } catch(e) {}
+  }
+
+  return true;
+}
+
 function doImport() {
   try {
     const inp = document.createElement('input');
@@ -531,15 +580,11 @@ function doImport() {
           // 형식 자동 감지
           // 1. 배열 형식: [{date:...}, ...]
           // 2. 내보내기 형식: {details:[...], summaries:{...}}
-          // 3. 단일 객체: {date:...}
-          let arr = [];
-          if (Array.isArray(d)) {
-            arr = d;
-          } else if (d.details && Array.isArray(d.details)) {
-            arr = d.details;
-          } else if (d.date) {
-            arr = [d];
-          } else {
+          // 3. 시즌2 전체 백업 형식: {storageItems:{...}}
+          // 4. 단일 객체: {date:...}
+          const arr = normalizeImportItems(d);
+          const storageOnly = d.storageItems && typeof d.storageItems === 'object';
+          if (!arr && !storageOnly) {
             toast('파일 형식을 인식할 수 없습니다');
             return;
           }
@@ -547,7 +592,7 @@ function doImport() {
           // 중복 날짜 확인
           const today = todayKey();
           const existingDates = JSON.parse(localStorage.getItem('all_dates')||'[]');
-          const duplicates = arr.filter(item=>item.date && existingDates.includes(item.date));
+          const duplicates = arr ? arr.filter(item=>item.date && existingDates.includes(item.date)) : [];
 
           let skipToday = false;
           if (duplicates.length > 0) {
@@ -559,40 +604,22 @@ function doImport() {
             if (!overwrite) skipToday = true;
           }
 
-          const importDates = arr.map(item=>item&&item.date).filter(Boolean);
+          const importDates = arr ? arr.map(item=>item&&item.date).filter(Boolean) : [today];
           const backup = createSafetyBackup('before_import', importDates);
           if (!backup.ok) {
             toast('자동 백업 실패 · 가져오기 중단');
             return;
           }
 
+          const storageCount = importSeason2StorageItems(d);
           let count = 0;
-          arr.forEach(item=>{
-            if (!item || !item.date) return;
-            // 중복 날짜 건너뛰기
-            if (skipToday && existingDates.includes(item.date)) return;
-            localStorage.setItem('report_'+item.date, JSON.stringify(item));
-            // logs_ 키도 같이 덮어쓰기 (중복 로그 방지)
-            if (item.state && Array.isArray(item.state.logs)) {
-              localStorage.setItem('logs_'+item.date, JSON.stringify(item.state.logs));
-            }
-            const dates = JSON.parse(localStorage.getItem('all_dates')||'[]');
-            if (!dates.includes(item.date)) {
-              dates.push(item.date);
-              dates.sort();
-              localStorage.setItem('all_dates', JSON.stringify(dates));
-            }
-            // all_data 업데이트
-            if (item.summary) {
-              try {
-                const all = JSON.parse(localStorage.getItem('all_data')||'{}');
-                all[item.date] = item.summary;
-                localStorage.setItem('all_data', JSON.stringify(all));
-              } catch(e) {}
-            }
-            count++;
-          });
-          toast(count+'일치 가져오기 완료');
+          if (arr) {
+            arr.forEach(item=>{
+              if (importReportItem(item, existingDates, skipToday)) count++;
+            });
+          }
+
+          toast(count+'일치 가져오기 완료'+(storageCount ? ' · 저장항목 '+storageCount+'개' : ''));
         } catch(e) {
           toast('파일 형식 오류: '+e.message);
         }
