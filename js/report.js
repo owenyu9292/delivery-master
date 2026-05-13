@@ -341,9 +341,24 @@ function doExport() {
   try {
     const dates = JSON.parse(localStorage.getItem('all_dates')||'[]');
     if (dates.length===0) { toast('저장된 데이터가 없습니다'); return; }
+    const logsByDate = {};
     const all = dates.map(d=>{
       const raw = localStorage.getItem('report_'+d);
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) return null;
+      const item = JSON.parse(raw);
+      const logRaw = localStorage.getItem('logs_'+d);
+      if (logRaw) {
+        try {
+          const dayLogs = JSON.parse(logRaw);
+          if (Array.isArray(dayLogs)) {
+            logsByDate[d] = dayLogs;
+            item.logs = dayLogs;
+            item.state = item.state || {};
+            item.state.logs = dayLogs;
+          }
+        } catch(e) {}
+      }
+      return item;
     }).filter(Boolean);
 
     // 통합 파일 (Claude 분석용)
@@ -354,6 +369,7 @@ function doExport() {
       totalDays: all.length,
       summaries: allData,   // 분석용 요약 (Claude에게 줄 것)
       details: all,         // 상세 데이터 전체
+      logsByDate,           // 날짜별 로그 전체
     };
 
     const jsonStr = JSON.stringify(exportObj, null, 2);

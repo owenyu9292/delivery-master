@@ -533,11 +533,11 @@ function importSeason2StorageItems(data) {
   return count;
 }
 
-function importReportItem(item, existingDates, skipDuplicates) {
+function importReportItem(item, existingDates, skipDuplicates, logsByDate) {
   if (!item || !item.date) return false;
   if (skipDuplicates && existingDates.includes(item.date)) return false;
 
-  const itemLogs = item.logs || (item.state && item.state.logs);
+  const itemLogs = item.logs || (item.state && item.state.logs) || (logsByDate && logsByDate[item.date]);
   if (Array.isArray(itemLogs)) {
     item.state = item.state || {};
     item.state.logs = itemLogs;
@@ -618,9 +618,10 @@ function doImport() {
 
           const storageCount = importSeason2StorageItems(d);
           let count = 0;
+          const logsByDate = d.logsByDate && typeof d.logsByDate === 'object' ? d.logsByDate : {};
           if (arr) {
             arr.forEach(item=>{
-              if (importReportItem(item, existingDates, skipToday)) count++;
+              if (importReportItem(item, existingDates, skipToday, logsByDate)) count++;
             });
           }
 
