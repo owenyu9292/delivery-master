@@ -298,7 +298,11 @@ function searchDate() {
   }
 
   const t = data.reportText||'';
-  const logList = (data.state && data.state.logs) ? data.state.logs : [];
+  let logList = (data.state && data.state.logs) ? data.state.logs : [];
+  if (!logList.length) {
+    try { logList = JSON.parse(localStorage.getItem('logs_'+date)||'[]'); }
+    catch(e) { logList = []; }
+  }
   const dots = {g:'green',b:'blue',pulse:'blue',cu:'purple',a:'amber',p:'gray'};
 
   const logHtml = logList.length ? `

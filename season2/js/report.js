@@ -537,9 +537,14 @@ function importReportItem(item, existingDates, skipDuplicates) {
   if (!item || !item.date) return false;
   if (skipDuplicates && existingDates.includes(item.date)) return false;
 
+  const itemLogs = item.logs || (item.state && item.state.logs);
+  if (Array.isArray(itemLogs)) {
+    item.state = item.state || {};
+    item.state.logs = itemLogs;
+  }
+
   localStorage.setItem('report_'+item.date, JSON.stringify(item));
 
-  const itemLogs = item.logs || (item.state && item.state.logs);
   if (Array.isArray(itemLogs)) {
     localStorage.setItem('logs_'+item.date, JSON.stringify(itemLogs));
   }
