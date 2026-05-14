@@ -27,6 +27,37 @@ const DM2_STORAGE_PREFIX = 'dm2_';
   };
 })();
 
+function recordErrorLog(source, err, extra) {
+  try {
+    const list = JSON.parse(localStorage.getItem('error_logs')||'[]');
+    const entry = {
+      at: new Date().toISOString(),
+      source,
+      message: err && err.message ? err.message : String(err),
+      name: err && err.name ? err.name : '',
+      stack: err && err.stack ? String(err.stack).slice(0, 1200) : '',
+      page: location.href,
+      ua: navigator.userAgent,
+      extra: extra || null,
+    };
+    list.push(entry);
+    while (list.length > 80) list.shift();
+    localStorage.setItem('error_logs', JSON.stringify(list));
+  } catch(e) {}
+}
+
+window.addEventListener('error', e=>{
+  recordErrorLog('window.error', e.error || e.message, {
+    filename: e.filename,
+    lineno: e.lineno,
+    colno: e.colno,
+  });
+});
+
+window.addEventListener('unhandledrejection', e=>{
+  recordErrorLog('unhandledrejection', e.reason || 'unhandled rejection');
+});
+
 // ── STATE ──
 let S = {
   phase: 'before',

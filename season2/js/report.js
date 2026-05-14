@@ -410,6 +410,28 @@ function downloadJsonFile(obj, filename, successMsg) {
   toast(successMsg);
 }
 
+function getErrorLogs() {
+  try { return JSON.parse(localStorage.getItem('error_logs')||'[]'); }
+  catch(e) { return []; }
+}
+
+function copyErrorLogs() {
+  const logs = getErrorLogs();
+  if (!logs.length) { toast('에러 로그 없음'); return; }
+  fallbackCopy(JSON.stringify(logs, null, 2));
+  toast('에러 로그 복사됨 · '+logs.length+'건');
+}
+
+function exportErrorLogs() {
+  const logs = getErrorLogs();
+  if (!logs.length) { toast('에러 로그 없음'); return; }
+  downloadJsonFile({
+    app: 'delivery-master-season2',
+    exportedAt: new Date().toISOString(),
+    logs,
+  }, backupFilename('에러로그'), '에러 로그 저장 완료');
+}
+
 function backupFilename(label) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   return '배송마스터_시즌2_' + label + '_' + todayKey() + '_' + stamp + '.json';
@@ -476,11 +498,18 @@ async function doFolderBackup() {
 
     downloadJsonFile(exportObj, filename, '폴더 저장 미지원 · 다운로드로 저장됨');
   } catch(e) {
+    recordErrorLog('doFolderBackup', e);
     if (e && e.name === 'AbortError') {
       toast('폴더 저장 취소됨');
       return;
     }
-    toast('폴더 백업 오류: '+e.message);
+    try {
+      const exportObj = buildFullBackupObject('folder_backup_fallback');
+      downloadJsonFile(exportObj, backupFilename('폴더실패_다운로드'), '폴더 오류 · 다운로드로 저장됨');
+    } catch(e2) {
+      recordErrorLog('doFolderBackup.fallback', e2);
+      toast('폴더 백업 오류: '+e.message);
+    }
   }
 }
 
@@ -495,6 +524,7 @@ function doPhoneBackup() {
     const exportObj = buildFullBackupObject('phone_file_backup');
     downloadJsonFile(exportObj, backupFilename('폰백업'), '폰 백업 파일 저장 완료');
   } catch(e) {
+    recordErrorLog('doPhoneBackup', e);
     toast('폰 백업 오류: '+e.message);
   }
 }
@@ -509,6 +539,7 @@ function doExport() {
     }
     downloadJsonFile(exportObj, backupFilename('전체'), '내보내기 완료 · '+exportObj.totalDays+'일치');
   } catch(e) {
+    recordErrorLog('doExport', e);
     toast('내보내기 오류: '+e.message);
   }
 }
@@ -627,6 +658,7 @@ function doImport() {
 
           toast(count+'일치 가져오기 완료'+(storageCount ? ' · 저장항목 '+storageCount+'개' : ''));
         } catch(e) {
+          recordErrorLog('doImport.parse', e);
           toast('파일 형식 오류: '+e.message);
         }
         document.body.removeChild(inp);
@@ -636,6 +668,7 @@ function doImport() {
     };
     inp.click();
   } catch(e) {
+    recordErrorLog('doImport', e);
     toast('가져오기 오류: '+e.message);
   }
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'delivery-master-season2-v6';
+const CACHE_NAME = 'delivery-master-season2-v7';
 const ASSETS = [
   '/delivery-master/season2/',
   '/delivery-master/season2/index.html',
