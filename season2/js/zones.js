@@ -216,7 +216,7 @@ function startCleanup() {
   document.getElementById('cu-start').textContent = ft(new Date(S.cuStart));
   document.getElementById('cu-end').textContent = '-';
   document.getElementById('btn-cu-end').disabled = false;
-  addLog('cu','정리 시작',ft(S.cuStart),'이동: '+mv+'분');
+  addLog('cu','정리 시작',ft(S.cuStart),'이동: '+mv+'분', S.zIdx);
   toast('정리 시작');
 }
 
@@ -246,7 +246,7 @@ function skipCleanup() {
   document.getElementById('hils-choice').style.display='none';
   document.getElementById('hils-cleanup').style.display='none';
   document.getElementById('gen-sec').style.display='block';
-  addLog('cu','바로 배송 시작',ft(now),'이동: '+Math.min(mv,5)+'분');
+  addLog('cu','바로 배송 시작',ft(now),'이동: '+Math.min(mv,5)+'분', S.zIdx);
   toast('바로 배송 시작');
 }
 
@@ -284,7 +284,7 @@ function doCleanupEnd() {
   document.getElementById('cu-end').textContent = ft(new Date(S.cuEnd));
   const cm = minBetween(new Date(S.cuStart), new Date(S.cuEnd));
   document.getElementById('gen-sec').style.display='block';
-  addLog('cu','정리 완료',ft(S.cuEnd),'정리: '+cm+'분');
+  addLog('cu','정리 완료',ft(S.cuEnd),'정리: '+cm+'분', S.zIdx);
   toast('정리 완료 · '+cm+'분');
 }
 

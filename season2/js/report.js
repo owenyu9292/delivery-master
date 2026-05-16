@@ -110,13 +110,16 @@ function buildReport() {
 
   // 로컬 저장
   const key = todayKey();
+  ensureCleanupLogsFromResults();
   const data = {
     date: key,
     state: JSON.parse(JSON.stringify(S)),
+    logs: JSON.parse(JSON.stringify(logs)),
     reportText: t,
     savedAt: new Date().toISOString(),
     summary: buildSummary()
   };
+  data.state.logs = data.logs;
   localStorage.setItem('report_'+key, JSON.stringify(data));
   const dates = JSON.parse(localStorage.getItem('all_dates')||'[]');
   if (!dates.includes(key)) { dates.push(key); dates.sort(); localStorage.setItem('all_dates',JSON.stringify(dates)); }
@@ -454,6 +457,13 @@ function buildFullBackupObject(reason) {
     const raw = localStorage.getItem('report_'+d);
     return raw ? JSON.parse(raw) : null;
   }).filter(Boolean);
+  const logsByDate = collectLogsByDate(dates, details);
+  details.forEach(item=>{
+    if (!item || !item.date || !Array.isArray(logsByDate[item.date])) return;
+    item.logs = logsByDate[item.date];
+    item.state = item.state || {};
+    item.state.logs = logsByDate[item.date];
+  });
   const allData = JSON.parse(localStorage.getItem('all_data')||'{}');
   const today = todayKey();
   const currentState = {
@@ -474,6 +484,7 @@ function buildFullBackupObject(reason) {
     dates,
     summaries: allData,
     details,
+    logsByDate,
     currentState,
     storageItems: collectSeason2StorageItems(),
   };
@@ -564,14 +575,82 @@ function importSeason2StorageItems(data) {
   return count;
 }
 
+function parseLogArray(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return null;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch(e) {
+    return null;
+  }
+}
+
+function firstUsefulLogs(candidates) {
+  let fallback = null;
+  for (const candidate of candidates) {
+    const logs = parseLogArray(candidate);
+    if (!logs) continue;
+    if (logs.length) return logs;
+    if (!fallback) fallback = logs;
+  }
+  return fallback;
+}
+
+function collectLogsByDate(dates, details) {
+  const byDate = {};
+
+  (dates || []).forEach(d=>{
+    const dayLogs = firstUsefulLogs([
+      localStorage.getItem('logs_'+d),
+      details && details.find(item=>item && item.date===d)?.logs,
+      details && details.find(item=>item && item.date===d)?.state?.logs,
+    ]);
+    if (Array.isArray(dayLogs)) byDate[d] = dayLogs;
+  });
+
+  return byDate;
+}
+
+function extractImportLogsByDate(data) {
+  const logsByDate = {};
+
+  if (data.logsByDate && typeof data.logsByDate === 'object') {
+    Object.entries(data.logsByDate).forEach(([date, value])=>{
+      const logs = parseLogArray(value);
+      if (Array.isArray(logs)) logsByDate[date] = logs;
+    });
+  }
+
+  if (data.storageItems && typeof data.storageItems === 'object') {
+    Object.entries(data.storageItems).forEach(([key, value])=>{
+      if (!key) return;
+      const cleanKey = key.startsWith(DM2_STORAGE_PREFIX) ? key.slice(DM2_STORAGE_PREFIX.length) : key;
+      if (!cleanKey.startsWith('logs_')) return;
+      const date = cleanKey.slice(5);
+      const logs = parseLogArray(value);
+      if (date && Array.isArray(logs) && (!logsByDate[date] || logs.length)) {
+        logsByDate[date] = logs;
+      }
+    });
+  }
+
+  return logsByDate;
+}
+
 function importReportItem(item, existingDates, skipDuplicates, logsByDate) {
   if (!item || !item.date) return false;
   if (skipDuplicates && existingDates.includes(item.date)) return false;
 
-  const itemLogs = item.logs || (item.state && item.state.logs) || (logsByDate && logsByDate[item.date]);
+  const itemLogs = firstUsefulLogs([
+    item.logs,
+    item.state && item.state.logs,
+    logsByDate && logsByDate[item.date],
+  ]);
   if (Array.isArray(itemLogs)) {
     item.state = item.state || {};
     item.state.logs = itemLogs;
+    item.logs = itemLogs;
   }
 
   localStorage.setItem('report_'+item.date, JSON.stringify(item));
@@ -647,9 +726,9 @@ function doImport() {
             return;
           }
 
+          const logsByDate = extractImportLogsByDate(d);
           const storageCount = importSeason2StorageItems(d);
           let count = 0;
-          const logsByDate = d.logsByDate && typeof d.logsByDate === 'object' ? d.logsByDate : {};
           if (arr) {
             arr.forEach(item=>{
               if (importReportItem(item, existingDates, skipToday, logsByDate)) count++;
@@ -742,7 +821,68 @@ function addLog(dot, title, time, detail, zIdx, isEvent) {
   logs.push({dot, title, time, detail, zIdx, isEvent:!!isEvent});
   saveSt();
 }
+function hasCleanupLog(zIdx, time, titlePart) {
+  return logs.some(l=>
+    l &&
+    l.dot === 'cu' &&
+    (l.zIdx === zIdx || l.zIdx === undefined) &&
+    l.time === time &&
+    (!titlePart || String(l.title||'').includes(titlePart))
+  );
+}
+
+function ensureCleanupLogsFromResults() {
+  if (!S || !Array.isArray(S.results)) return false;
+
+  let changed = false;
+  S.results.forEach((r, idx)=>{
+    if (!r || !r.cuStart || !r.cuEnd || r.cuEnd === 'SKIP') return;
+
+    const zIdx = r.zIdx !== undefined ? r.zIdx : idx;
+    const start = new Date(r.cuStart);
+    const end = new Date(r.cuEnd);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
+
+    const startTime = ft(start);
+    const endTime = ft(end);
+    const cleanMin = minBetween(start, end);
+    const restored = [];
+
+    if (!hasCleanupLog(zIdx, startTime, '정리 시작')) {
+      restored.push({
+        dot:'cu',
+        title:'정리 시작',
+        time:startTime,
+        detail:'리포트에서 복원',
+        zIdx,
+        restored:true,
+      });
+    }
+
+    if (!hasCleanupLog(zIdx, endTime, '정리 완료')) {
+      restored.push({
+        dot:'cu',
+        title:'정리 완료',
+        time:endTime,
+        detail:'정리: '+cleanMin+'분',
+        zIdx,
+        restored:true,
+      });
+    }
+
+    if (!restored.length) return;
+
+    const completeIdx = logs.findIndex(l=>l && l.dot==='g' && l.zIdx===zIdx);
+    if (completeIdx >= 0) logs.splice(completeIdx, 0, ...restored);
+    else logs.push(...restored);
+    changed = true;
+  });
+
+  if (changed) saveSt();
+  return changed;
+}
 function renderLog() {
+  ensureCleanupLogsFromResults();
   const c = document.getElementById('log-box');
   if (!logs.length) {
     c.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">아직 기록이 없습니다</div></div>';
