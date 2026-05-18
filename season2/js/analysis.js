@@ -303,6 +303,18 @@ function searchDate() {
     try { logList = JSON.parse(localStorage.getItem('logs_'+date)||'[]'); }
     catch(e) { logList = []; }
   }
+  if (typeof ensureCleanupLogsInList === 'function') {
+    const results = data.state && Array.isArray(data.state.results) ? data.state.results : [];
+    const changed = ensureCleanupLogsInList(results, logList);
+    if (changed) {
+      data.state = data.state || {};
+      data.state.logs = logList;
+      try {
+        localStorage.setItem('logs_'+date, JSON.stringify(logList));
+        localStorage.setItem('report_'+date, JSON.stringify(data));
+      } catch(e) {}
+    }
+  }
   const dots = {g:'green',b:'blue',pulse:'blue',cu:'purple',a:'amber',p:'gray'};
 
   const logHtml = logList.length ? `

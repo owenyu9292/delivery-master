@@ -821,21 +821,20 @@ function addLog(dot, title, time, detail, zIdx, isEvent) {
   logs.push({dot, title, time, detail, zIdx, isEvent:!!isEvent});
   saveSt();
 }
-function hasCleanupLog(zIdx, time, titlePart) {
+function hasCleanupLog(zIdx, time) {
   return logs.some(l=>
     l &&
     l.dot === 'cu' &&
     (l.zIdx === zIdx || l.zIdx === undefined) &&
-    l.time === time &&
-    (!titlePart || String(l.title||'').includes(titlePart))
+    l.time === time
   );
 }
 
-function ensureCleanupLogsFromResults() {
-  if (!S || !Array.isArray(S.results)) return false;
+function ensureCleanupLogsInList(results, logList) {
+  if (!Array.isArray(results) || !Array.isArray(logList)) return false;
 
   let changed = false;
-  S.results.forEach((r, idx)=>{
+  results.forEach((r, idx)=>{
     if (!r || !r.cuStart || !r.cuEnd || r.cuEnd === 'SKIP') return;
 
     const zIdx = r.zIdx !== undefined ? r.zIdx : idx;
@@ -848,7 +847,10 @@ function ensureCleanupLogsFromResults() {
     const cleanMin = minBetween(start, end);
     const restored = [];
 
-    if (!hasCleanupLog(zIdx, startTime, '정리 시작')) {
+    const hasStart = logList.some(l=>l && l.dot==='cu' && (l.zIdx===zIdx || l.zIdx===undefined) && l.time===startTime);
+    const hasEnd = logList.some(l=>l && l.dot==='cu' && (l.zIdx===zIdx || l.zIdx===undefined) && l.time===endTime);
+
+    if (!hasStart) {
       restored.push({
         dot:'cu',
         title:'정리 시작',
@@ -859,7 +861,7 @@ function ensureCleanupLogsFromResults() {
       });
     }
 
-    if (!hasCleanupLog(zIdx, endTime, '정리 완료')) {
+    if (!hasEnd) {
       restored.push({
         dot:'cu',
         title:'정리 완료',
@@ -872,12 +874,17 @@ function ensureCleanupLogsFromResults() {
 
     if (!restored.length) return;
 
-    const completeIdx = logs.findIndex(l=>l && l.dot==='g' && l.zIdx===zIdx);
-    if (completeIdx >= 0) logs.splice(completeIdx, 0, ...restored);
-    else logs.push(...restored);
+    const completeIdx = logList.findIndex(l=>l && l.dot==='g' && l.zIdx===zIdx);
+    if (completeIdx >= 0) logList.splice(completeIdx, 0, ...restored);
+    else logList.push(...restored);
     changed = true;
   });
 
+  return changed;
+}
+
+function ensureCleanupLogsFromResults() {
+  const changed = ensureCleanupLogsInList(S && S.results, logs);
   if (changed) saveSt();
   return changed;
 }
